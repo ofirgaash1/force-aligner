@@ -18,7 +18,11 @@ WORKDIR /app
 
 # Install Python deps first (leverage Docker layer cache)
 COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# Install CPU-only PyTorch wheels to avoid large CUDA deps
+RUN pip install --no-cache-dir \
+      --index-url https://download.pytorch.org/whl/cpu \
+      torch==2.8.0+cpu torchaudio==2.8.0+cpu \
+    && pip install --no-cache-dir -r requirements.txt
 
 # App code
 COPY app ./app
