@@ -27,17 +27,9 @@ COPY app ./app
 ARG PRELOAD_MODEL=false
 RUN mkdir -p /models \
     && if [ "$PRELOAD_MODEL" = "true" ]; then \
-         python - <<'PY'; \
-from app.model import get_model
-from app.config import get_settings
-s = get_settings()
-print('Preloading model:', s.align_model)
-get_model(s.align_model, s.device)
-print('Model cached under HF_HOME:', s.hf_home)
-PY
+         python -c "from app.model import get_model; from app.config import get_settings; s=get_settings(); print('Preloading model:', s.align_model); get_model(s.align_model, s.device); print('Model cached under HF_HOME:', s.hf_home)"; \
        fi
 
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
