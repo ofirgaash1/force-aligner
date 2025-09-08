@@ -1,0 +1,144 @@
+Here’s a **step-by-step roadmap** (with milestones) for delivering a production-ready endpoint that does forced alignment in Hebrew using the model `imvladikon/wav2vec2-xls-r-300m-hebrew`.
+
+---
+
+## 🎯 Phase 1 — Foundation & Environment
+
+**Milestone 1.1: Project setup**
+
+* Choose runtime: Python 3.10+
+* Create repo (`git init`, virtualenv/poetry).
+* Decide on framework: **FastAPI** (good async support, easy JSON).
+* Add base deps: `fastapi`, `uvicorn`, `torch`, `torchaudio`, `transformers`.
+
+**Milestone 1.2: Model acquisition**
+
+* `from transformers import AutoProcessor, AutoModelForCTC` with `imvladikon/wav2vec2-xls-r-300m-hebrew`.
+* Cache model locally (e.g. in `/models`).
+* Verify it loads offline.
+
+**Milestone 1.3: Audio pre-processing**
+
+* Load audio with `torchaudio.load()`.
+* Resample to 16 kHz mono.
+* Wrap in helper that accepts WAV/MP3/WEBM.
+
+---
+
+## 🎯 Phase 2 — Alignment Logic
+
+**Milestone 2.1: Tokenization pipeline**
+
+* Use `AutoProcessor` tokenizer.
+* Encode each word into token IDs (no romanization needed here).
+
+**Milestone 2.2: Frame emission**
+
+* Run audio through model → logits `[T, V]`.
+* Apply `log_softmax` for stable probabilities.
+
+**Milestone 2.3: Forced alignment**
+
+* Implement **CTC Viterbi alignment**:
+
+  * Use `torchaudio.functional.forced_align` (new API) **or** `ctc-segmentation` package.
+  * Align token sequence of transcript to emissions.
+  * Aggregate token spans → word spans.
+
+**Milestone 2.4: Output shaping**
+
+* Normalize start/end into seconds.
+* Compute confidence score (mean log prob of aligned spans).
+* JSON schema:
+
+  ```json
+  {"duration_sec": 12.3, "words":[{"word":"שלום","start":0.42,"end":0.71,"score":0.98}]}
+  ```
+
+---
+
+## 🎯 Phase 3 — API Layer
+
+**Milestone 3.1: Endpoint design**
+
+* `POST /align` with multipart `audio` + form field `transcript`.
+* Response → JSON with words + timestamps.
+
+**Milestone 3.2: Error handling**
+
+* Empty transcript → 400.
+* Unsupported audio codec → return clear message.
+* Long audio (>60s) → 413 or chunking hint.
+
+**Milestone 3.3: Basic logging**
+
+* Log request duration, audio length, alignment tokens matched.
+
+---
+
+## 🎯 Phase 4 — Deployment
+
+**Milestone 4.1: Containerization**
+
+* Dockerfile:
+
+  * Base: `python:3.11-slim`.
+  * Install ffmpeg + dependencies.
+  * Copy code, preload model into `/models`.
+
+**Milestone 4.2: Runtime config**
+
+* ENV vars:
+
+  * `HF_HOME=/models` (model cache).
+  * `ALIGN_MODEL=imvladikon/wav2vec2-xls-r-300m-hebrew`.
+* CMD: `uvicorn app:app --host 0.0.0.0 --port 8000`.
+
+**Milestone 4.3: Healthcheck**
+
+* `/healthz` returns `{status:"ok"}`.
+* CI step verifies load + align on 3s Hebrew test clip.
+
+---
+
+## 🎯 Phase 5 — Optimizations
+
+**Milestone 5.1: Quantization**
+
+* Use `optimum` to export → ONNX + int8 quantization.
+* Drops size from \~1.2 GB → \~300 MB.
+* Swap runtime to `onnxruntime` for inference.
+
+**Milestone 5.2: Performance tuning**
+
+* Torch inference: use `inference_mode()`.
+* Warm up model at startup.
+* Optional batching if multiple clients.
+
+---
+
+## 🎯 Phase 6 — Scaling & Features
+
+**Milestone 6.1: Long audio handling**
+
+* Add `max_audio_sec` parameter.
+* If audio longer, split on silence (e.g. pyannote/silero VAD) and align per segment.
+
+**Milestone 6.2: Advanced output**
+
+* Add phoneme spans (optional, if tokenizer supports).
+* Support CSV/TextGrid export.
+
+**Milestone 6.3: Monitoring**
+
+* Collect metrics: request count, average latency, alignment success rate.
+
+---
+
+## ✅ Deliverable
+
+At the end:
+
+* **Running endpoint** (`/align`) that takes small Hebrew audio + transcript and returns precise timestamps (word level).
+* Docker container (≈ 350–400 MB with quantized ONNX).
+* Ready for deployment behind reverse proxy / load balancer.

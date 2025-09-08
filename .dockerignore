@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.vscode/
+.idea/
+models/
+data/
+dist/
+build/
+Dockerfile*
+README.md
+plan.txt
