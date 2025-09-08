@@ -20,25 +20,19 @@ This launches FastAPI on port 8000 and mounts `./models` → `/models` inside th
 Send a Request
 --------------
 
-- PowerShell (Windows):
-
-```
-irm -Method Post -Uri http://localhost:8000/align -Form @{ audio = Get-Item .\sample.wav; transcript = 'שלום עולם' }
-```
-
-- curl (Linux/macOS):
+- local
 
 ```
 curl -X POST -F "audio=@sample.wav" -F "transcript=שלום עולם" http://localhost:8000/align
 ```
 
-- Remote example (PowerShell), replace host as needed:
+- Remote example=
 
 ```
-irm -Method Post -Uri http://www.silence-remover.com:8000/align -Form @{ audio = Get-Item .\sample.wav; transcript = 'שלום עולם' }
+curl -X POST -F "audio=@sample.wav" -F "transcript=שלום עולם" http://silence-remover.com:8000/align
 ```
 
-Example Response (truncated):
+Example Response:
 
 ```
 {
