@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  he-aligner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        PRELOAD_MODEL: "false"  # set to "true" to bake model into image
+    image: he-aligner:latest
+    container_name: he-aligner
+    ports:
+      - "8000:8000"
+    environment:
+      - ALIGN_MODEL=imvladikon/wav2vec2-xls-r-300m-hebrew
+      - ALIGN_DEVICE=cpu
+      - MAX_AUDIO_SEC=60
+      - HF_HOME=/models
+    volumes:
+      - ./models:/models
+    restart: unless-stopped
